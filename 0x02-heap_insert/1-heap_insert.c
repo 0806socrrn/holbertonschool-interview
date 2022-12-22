@@ -1,99 +1,117 @@
-#include "binary.h"
-/**
- * binary_tree_size - goes through a binary tree using pre-order traversal
- * @tree: parent of node.
- * Return: nothing.
- */
-size_t binary_tree_size(const binary_tree_t *tree)
-{
-	size_t size;
+#include "binary_trees.h"
 
-	if (!tree)
-		return (0);
-	size = 1 + binary_tree_size(tree->left) + binary_tree_size(tree->right);
-	return (size);
-}
-/**
- * numtostr - converts number to string
- * @num: size of tree
- * @base: base to convert
- * Return: result string
- */
-char *numtostr(unsigned long int num, int base)
-{
-	static char *repre, buff[50];
-	char *binary;
-
-	repre = "01";
-
-	binary = &buff[49];
-	*binary = 0;
-
-	while (num)
-	{
-		binary--;
-		*binary = repre[num % base];
-		num /= base;
-	}
-	return (binary);
-}
-/**
- * insert_node - insert the new node to correct position
- * @root: double pointer to root of max heap
- * @node: new node to insert
- */
-void insert_node(heap_t **root, heap_t *node)
-{
-	char bin, *binary;
-	unsigned int idx, size;
-	heap_t *aux = NULL;
-
-	aux = *root;
-	size = binary_tree_size(aux) + 1;
-	binary = numtostr(size, 2);
-	for (idx = 1; idx < strlen(binary); idx++)
-	{
-		bin = binary[idx];
-		if (idx == strlen(binary) - 1)
-		{
-			if (bin == '1')
-				aux->right = node;
-			if (bin == '0')
-				aux->left = node;
-			node->parent = aux;
-		}
-		else if (bin == '1')
-			aux = aux->right;
-		else if (bin == '0')
-			aux = aux->left;
-	}
-}
 /**
  * heap_insert - inserts a value into a Max Binary Heap
- * @root: a double pointer to the root node of the Heap
- * @value: value store in the node to be inserted
- * Return: a pointer to the inserted node, or NULL on failure
+ * @root: double pointer to the root node of the Heap
+ * @value: value to store in the node to be inserted
+ * Return: pointer to the inserted node, or NULL on failure
  */
 heap_t *heap_insert(heap_t **root, int value)
 {
-	heap_t *new_node = NULL;
-	int n;
+	int tmp;
+	heap_t *new;
 
-	if (!root)
+	if (root == NULL)
 		return (NULL);
-	new_node = binary_tree_node(NULL, value);
-	if (!(*root))
+
+	new = binary_tree_node(NULL, value);
+	if (new == NULL)
+		return (NULL);
+
+	/*address stored in root is NULL*/
+	if (*root == NULL)
 	{
-		*root = new_node;
-		return (new_node);
+		*root = new;
+		return (new);
 	}
-	insert_node(root, new_node);
-	while (new_node->parent && new_node->n > new_node->parent->n)
+
+	/*insert in root*/
+	new->parent = _insert(*root, new);
+
+	/*
+	 * Max Heap ordering: if perfect tree, insert left. Otherwise, full it.
+	 * new node value always < to their parent value
+	 */
+	while (new->parent &&new->n > new->parent->n)
 	{
-		n = new_node->parent->n;
-		new_node->parent->n = new_node->n;
-		new_node->n = n;
-		new_node = new_node->parent;
+		tmp = new->parent->n;
+		new->parent->n = new->n;
+		new->n = tmp;
+
+		new = new->parent;
 	}
-	return (new_node);
+
+	return (new);
+}
+
+/**
+ * _insert - inserts a value into a Binary Tree
+ * @tree: pointer to the root node
+ * @new: pointer to the new node
+ * Return: pointer to the inserted node, or NULL on failure
+ */
+heap_t *_insert(heap_t *tree, heap_t *new)
+{
+	size_t nb_nodes;
+	heap_t *parent;
+
+	if (tree == NULL)
+		return (tree);
+
+	nb_nodes = binary_tree_size(tree);
+	parent = find_parent(tree, 0, (nb_nodes - 1) / 2);
+
+	if (parent->left == NULL)
+		parent->left = new;
+	else
+		parent->right = new;
+
+	return (parent);
+}
+
+/**
+ * binary_tree_size - measures the size of a binary tree
+ * @tree: Pointer to the root node of the tree to measure the size
+ * Return:  measures the size of a binary tree
+ */
+size_t binary_tree_size(const heap_t *tree)
+{
+	size_t counter_l = 0;
+	size_t counter_r = 0;
+
+	if (tree == NULL)
+		return (0);
+
+	counter_l += binary_tree_size(tree->left);
+	counter_r += binary_tree_size(tree->right);
+
+	return (counter_l + counter_r + 1);
+}
+
+/**
+ * find_parent - find the parent who didn't have two children
+ * @tree: pointer to the root node of the tree
+ * @index: index of the node in the tree
+ * @nb_nodes: number of nodes in the binary tree
+ * Return: left child, right child or NULL if the parent have two children
+ */
+heap_t *find_parent(heap_t *tree, int index, int nb_nodes)
+{
+	heap_t *left_child, *right_child;
+
+	if (index == nb_nodes)
+		return (tree);
+
+	if (index > nb_nodes)
+		return (NULL);
+
+	left_child = find_parent(tree->left, 2 * index + 1, nb_nodes);
+	right_child = find_parent(tree->right, 2 * index + 2, nb_nodes);
+
+	if (left_child)
+		return (left_child);
+	else if (right_child)
+		return (right_child);
+	else
+		return (NULL);
 }
